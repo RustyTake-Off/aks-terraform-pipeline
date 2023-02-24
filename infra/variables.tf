@@ -1,13 +1,43 @@
-variable "Aks" {
-  description = "Resources configuration"
-  default = {
+####################################################################################################
+# External variables
+variable "ARM_TENANT_ID" {
+  sensitive = true
+}
 
-    Suffix   = "aztfpro03"
-    Location = "westeurope"
-    RgName   = "rg"
+variable "ARM_SUBSCRIPTION_ID" {
+  sensitive = true
+}
 
-    AksName            = "aks"
-    DefaultNodeVMSku   = "Standard_B2s"
-    AksWorkerNodeVmSku = "Standard_D2s_v3"
-  }
+variable "ARM_CLIENT_ID" {
+  sensitive = true
+}
+
+variable "ARM_CLIENT_SECRET" {
+  sensitive = true
+}
+
+####################################################################################################
+# General variables
+variable "Suffix" {
+  default = "aztfpro03"
+}
+
+variable "Location" {
+  default = "westeurope"
+}
+
+variable "RgName" {
+  default = "rg"
+}
+
+variable "AksName" {
+  default = "aks"
+}
+
+variable "DefaultNodeVMSku" {
+  default = "Standard_B2s"
+}
+
+variable "AksWorkerNodeVmSku" {
+  default = "Standard_D2s_v3"
 }
