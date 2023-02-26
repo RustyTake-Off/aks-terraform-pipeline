@@ -1,3 +1,93 @@
 ####################################################################################################
 # Azure DevOps Initial Terraform Pipeline
 
+name: $(BuildDefinitionName)_$(date:yyyyMMdd)$(rev:.r)
+
+trigger: none # Disable CI builds entirely.
+
+pr: none # Disable pull request triggers.
+
+parameters:
+  - name: Action
+    displayName: Action
+    type: String
+    default: "Plan"
+    values:
+      - Fmt
+      - Validate
+      - Plan
+      - Apply
+      - Destroy
+
+variables:
+  - name: backendServiceArm
+    value: "Azure Subscription" # Azure Subscription 
+  - name: backendAzureRmResourceGroupName
+    value: "rgaztfpro03"
+  - name: backendAzureRmStorageAccountName
+    value: "straccaztfpro03"
+  - name: backendAzureRmContainerName
+    value: "contaztfpro03"
+  - name: backendAzureRmKey
+    value: "tfstateaztfpro03.tfstate"
+  - name: vmImage
+    value: "ubuntu-latest"
+  - name: terraformVersion
+    value: "latest"
+  - name: action
+    value: ${{ parameters.Action }}
+  - name: workingDirectory
+    value: "$(System.DefaultWorkingDirectory)/infra/"
+
+stages:
+  - stage: terraform_plan_stage
+    displayName: "Terraform Validate Stage"
+    pool:
+      vmImage: "${{ variables.vmImage }}"
+    condition: ne("${{ parameters.Action }}", "Destroy")
+
+    jobs:
+      - job: terraform_validate_job
+        displayName: "Terraform Validate Job"
+
+        steps:
+          - task: TerraformInstaller@1
+            displayName: "Terraform Install Task"
+            name: "terraform_install_task"
+            inputs:
+              terraformVersion: "${{ variables.terraformVersion }}"
+
+          - task: TerraformTaskV4@4
+            displayName: "Terraform Init Task"
+            name: "terraform_init_task"
+            inputs:
+              provider: "azurerm"
+              command: "init"
+              backendServiceArm: "${{ variables.backendServiceArm }}"
+              backendAzureRmResourceGroupName: "${{ variables.backendAzureRmResourceGroupName }}"
+              backendAzureRmStorageAccountName: "${{ variables.backendAzureRmStorageAccountName }}"
+              backendAzureRmContainerName: "${{ variables.backendAzureRmContainerName }}"
+              backendAzureRmKey: "${{ variables.backendAzureRmKey }}"
+              workingDirectory: "${{ variables.workingDirectory }}"
+
+          - task: TerraformTaskV4@4
+            displayName: "Terraform Plan Task"
+            name: "terraform_plan_task"
+            condition: and(succeeded(), eq(variables["Action"], "Plan"))
+            inputs:
+              provider: "azurerm"
+              command: "plan"
+              environmentServiceNameAzureRM: "${{ variables.backendServiceArm }}"
+              workingDirectory: "${{ variables.workingDirectory }}"
+      
+      - job: "terraform_apply_job"
+        displayName: "Terraform Apply Job"
+        condition: contains(dependencies.terraform_validate_job.result, "Succeeded")
+
+        steps:
+          - task: TerraformTaskV4@4
+            displayName: "Terraform Apply Task"
+            name: "terraform_apply_task"
+            inputs:
+              
+
