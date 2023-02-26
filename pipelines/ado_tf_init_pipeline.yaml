@@ -82,12 +82,27 @@ stages:
       
       - job: "terraform_apply_job"
         displayName: "Terraform Apply Job"
-        condition: contains(dependencies.terraform_validate_job.result, "Succeeded")
+        condition: eq(dependencies.terraform_validate_job.result, "Succeeded")
 
         steps:
           - task: TerraformTaskV4@4
+            displayName: "Terraform Plan Task"
+            name: "terraform_plan_task"
+            condition: and(succeeded(), eq(variables["Action"], "Plan"))
+            inputs:
+              provider: "azurerm"
+              command: "plan"
+              environmentServiceNameAzureRM: "${{ variables.backendServiceArm }}"
+              workingDirectory: "${{ variables.workingDirectory }}"
+
+          - task: TerraformTaskV2@2
             displayName: "Terraform Apply Task"
             name: "terraform_apply_task"
+            condition: and(succeeded(), eq(variables["Action"], "Apply"))
             inputs:
-              
+              provider: "azurerm"
+              command: "apply"
+              environmentServiceNameAzureRM: "${{ variables.backendServiceArm }}"
+              workingDirectory: "${{ variables.workingDirectory }}"
+
 
