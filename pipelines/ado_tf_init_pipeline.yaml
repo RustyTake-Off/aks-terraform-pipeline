@@ -3,10 +3,13 @@
 
 name: $(BuildDefinitionName)_$(date:yyyyMMdd)$(rev:.r)
 
+# Triggers
 trigger: none # Disable CI builds entirely.
 
+# Pull Request Triggers
 pr: none # Disable pull request triggers.
 
+# Pipeline Parameters
 parameters:
   - name: Action
     displayName: Action
@@ -19,6 +22,7 @@ parameters:
       - Apply
       - Destroy
 
+# Pipeline Variables
 variables:
   - name: backendServiceArm
     value: "Azure Subscription" # Azure Subscription 
@@ -40,6 +44,7 @@ variables:
     value: "$(System.DefaultWorkingDirectory)/infra/"
 
 stages:
+  # Terraform Validate, Plan, Apply Stage
   - stage: terraform_plan_stage
     displayName: "Terraform Validate Stage"
     pool:
@@ -47,16 +52,19 @@ stages:
     condition: ne("${{ parameters.Action }}", "Destroy")
 
     jobs:
+      # Terraform Validate Job
       - job: terraform_validate_job
         displayName: "Terraform Validate Job"
 
         steps:
+          # Terraform Installer Task
           - task: TerraformInstaller@1
             displayName: "Terraform Install Task"
             name: "terraform_install_task"
             inputs:
               terraformVersion: "${{ variables.terraformVersion }}"
 
+          # Terraform Init Task
           - task: TerraformTaskV4@4
             displayName: "Terraform Init Task"
             name: "terraform_init_task"
@@ -70,6 +78,7 @@ stages:
               backendAzureRmKey: "${{ variables.backendAzureRmKey }}"
               workingDirectory: "${{ variables.workingDirectory }}"
 
+          # Terraform Plan Task
           - task: TerraformTaskV4@4
             displayName: "Terraform Plan Task"
             name: "terraform_plan_task"
@@ -80,11 +89,13 @@ stages:
               environmentServiceNameAzureRM: "${{ variables.backendServiceArm }}"
               workingDirectory: "${{ variables.workingDirectory }}"
       
+      # Terraform Apply Job
       - job: "terraform_apply_job"
         displayName: "Terraform Apply Job"
         condition: eq(dependencies.terraform_validate_job.result, "Succeeded")
 
         steps:
+          # Terraform Plan Task
           - task: TerraformTaskV4@4
             displayName: "Terraform Plan Task"
             name: "terraform_plan_task"
@@ -95,7 +106,8 @@ stages:
               environmentServiceNameAzureRM: "${{ variables.backendServiceArm }}"
               workingDirectory: "${{ variables.workingDirectory }}"
 
-          - task: TerraformTaskV2@2
+          # Terraform Apply Task
+          - task: TerraformTaskV4@4
             displayName: "Terraform Apply Task"
             name: "terraform_apply_task"
             condition: and(succeeded(), eq(variables["Action"], "Apply"))
@@ -105,4 +117,40 @@ stages:
               environmentServiceNameAzureRM: "${{ variables.backendServiceArm }}"
               workingDirectory: "${{ variables.workingDirectory }}"
 
+  # Terraform Destroy Stage
+  - stage: terraform_destroy_stage
+    displayName: "Terraform Destroy Stage"
+    pool:
+      vmImage: "${{ variables.vmImage }}"
+    condition: contains("${{ parameters.Action }}", "Destroy")
 
+    jobs:
+      # Terraform Destroy Job
+      - job: terraform_destroy_job
+        displayName: "Terraform Destroy Job"
+
+        steps:
+          # Terraform Init Task
+          - task: TerraformTaskV4@4
+            displayName: "Terraform Init Task"
+            name: "terraform_init_task"
+            inputs:
+              provider: "azurerm"
+              command: "init"
+              backendServiceArm: "${{ variables.backendServiceArm }}"
+              backendAzureRmResourceGroupName: "${{ variables.backendAzureRmResourceGroupName }}"
+              backendAzureRmStorageAccountName: "${{ variables.backendAzureRmStorageAccountName }}"
+              backendAzureRmContainerName: "${{ variables.backendAzureRmContainerName }}"
+              backendAzureRmKey: "${{ variables.backendAzureRmKey }}"
+              workingDirectory: "${{ variables.workingDirectory }}"
+
+          # Terraform Destroy Task
+          - task: TerraformTaskV4@4
+            displayName: "Terraform Destroy Task"
+            name: "terraform_destroy_task"
+            condition: and(succeeded(), eq(variables["action"], "Destroy"))
+            inputs:
+              provider: "azurerm"
+              command: "destroy"
+              environmentServiceNameAzureRM: "${{ variables.backendServiceArm }}"
+              workingDirectory: "${{ variables.workingDirectory }}"
