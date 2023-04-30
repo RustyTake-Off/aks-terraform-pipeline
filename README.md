@@ -4,7 +4,7 @@ Remember to look around all the folders, files and change things to your own lik
 
 ## [Projects](https://github.com/RustyTake-Off/projects)
 
-[Project] - Create AKS in terraform and deploy it using Azure DevOps with a custom pipelines.
+Create AKS in terraform and deploy it using Azure DevOps with a custom pipelines.
 
 ## Prerequisites
 
